@@ -21,7 +21,7 @@ const App = () => {
     }
   }));
 
-  const [showToggle, setShowToggle] = useState(false);
+  const [showToggle, setShowToggle] = useState(true);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -30,20 +30,8 @@ const App = () => {
         <Sonner />
         
         {showToggle && (
-          <SideToggle>
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Side Panel</h2>
-              <p className="text-muted-foreground">This is a toggleable side panel that appears when you click the toggle button.</p>
-              <div className="py-2">
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={() => setShowToggle(false)}
-                >
-                  Close Panel
-                </Button>
-              </div>
-            </div>
+          <SideToggle onClose={() => setShowToggle(false)}>
+            {/* The SideToggle component will now automatically include the Navigation component */}
           </SideToggle>
         )}
         
@@ -53,7 +41,7 @@ const App = () => {
             variant="secondary"
             className="shadow-md"
           >
-            Toggle Side Panel
+            Toggle Chat History
           </Button>
         </div>
         
