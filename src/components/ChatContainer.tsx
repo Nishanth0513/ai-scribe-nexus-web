@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +37,6 @@ const ChatContainer = ({ chatId, chats, onUpdateChats }: ChatContainerProps) => 
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Find the current chat or use empty messages if no chat is selected
   const currentChat = chats.find(chat => chat.id === chatId) || { 
     id: '',
     name: '',
@@ -56,7 +54,6 @@ const ChatContainer = ({ chatId, chats, onUpdateChats }: ChatContainerProps) => 
   }, [currentChat.messages]);
 
   useEffect(() => {
-    // Focus input when chat changes
     if (inputRef.current) {
       inputRef.current.focus();
     }
@@ -74,12 +71,10 @@ const ChatContainer = ({ chatId, chats, onUpdateChats }: ChatContainerProps) => 
       file: selectedFile || undefined
     };
     
-    // Create new chat if needed or update existing one
     let updatedChats: Chat[] = [...chats];
     let updatedChatId = chatId;
     
     if (!chatId) {
-      // Create a new chat
       const newChatId = uuidv4();
       updatedChatId = newChatId;
       updatedChats.unshift({
@@ -90,7 +85,6 @@ const ChatContainer = ({ chatId, chats, onUpdateChats }: ChatContainerProps) => 
         messages: [userMessage]
       });
     } else {
-      // Update existing chat
       updatedChats = updatedChats.map(chat => {
         if (chat.id === chatId) {
           return {
@@ -104,7 +98,6 @@ const ChatContainer = ({ chatId, chats, onUpdateChats }: ChatContainerProps) => 
       });
     }
     
-    // Update the chats
     onUpdateChats(updatedChats);
     
     setInputValue('');
@@ -112,7 +105,6 @@ const ChatContainer = ({ chatId, chats, onUpdateChats }: ChatContainerProps) => 
     setIsLoading(true);
     
     try {
-      // Create form data to send both message and file
       const formData = new FormData();
       formData.append('message', inputValue);
       if (selectedFile) {
@@ -139,14 +131,12 @@ const ChatContainer = ({ chatId, chats, onUpdateChats }: ChatContainerProps) => 
       setTimeout(() => {
         setIsLoading(false);
         
-        // Create AI response message
         const aiMessage = {
           content: data.response || "I'm sorry, I couldn't process your request.",
           isUser: false,
           timestamp: new Date()
         };
         
-        // Update the chat with AI response
         const finalUpdatedChats = updatedChats.map(chat => {
           if (chat.id === updatedChatId) {
             return {
@@ -158,8 +148,7 @@ const ChatContainer = ({ chatId, chats, onUpdateChats }: ChatContainerProps) => 
         });
         
         onUpdateChats(finalUpdatedChats);
-      }, 1000); // Adding a delay to show the loading indicator
-      
+      }, 1000);
     } catch (error) {
       console.error('Error:', error);
       setIsLoading(false);
