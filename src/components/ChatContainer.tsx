@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Paperclip, X } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
 import Message from './Message';
 import LoadingIndicator from './LoadingIndicator';
 import { useToast } from "@/hooks/use-toast";
@@ -14,8 +15,21 @@ interface ChatMessage {
   file?: File;
 }
 
-const ChatContainer = () => {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+interface Chat {
+  id: string;
+  name: string;
+  snippet: string;
+  timestamp: Date;
+  messages: ChatMessage[];
+}
+
+interface ChatContainerProps {
+  chatId: string | null;
+  chats: Chat[];
+  onUpdateChats: (chats: Chat[]) => void;
+}
+
+const ChatContainer = ({ chatId, chats, onUpdateChats }: ChatContainerProps) => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -24,13 +38,29 @@ const ChatContainer = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Find the current chat or use empty messages if no chat is selected
+  const currentChat = chats.find(chat => chat.id === chatId) || { 
+    id: '',
+    name: '',
+    snippet: '',
+    timestamp: new Date(),
+    messages: [] 
+  };
+  
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [currentChat.messages]);
+
+  useEffect(() => {
+    // Focus input when chat changes
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [chatId]);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -44,7 +74,39 @@ const ChatContainer = () => {
       file: selectedFile || undefined
     };
     
-    setMessages(prev => [...prev, userMessage]);
+    // Create new chat if needed or update existing one
+    let updatedChats: Chat[] = [...chats];
+    let updatedChatId = chatId;
+    
+    if (!chatId) {
+      // Create a new chat
+      const newChatId = uuidv4();
+      updatedChatId = newChatId;
+      updatedChats.unshift({
+        id: newChatId,
+        name: inputValue.slice(0, 20) || "New Chat",
+        snippet: inputValue || "Empty chat",
+        timestamp: new Date(),
+        messages: [userMessage]
+      });
+    } else {
+      // Update existing chat
+      updatedChats = updatedChats.map(chat => {
+        if (chat.id === chatId) {
+          return {
+            ...chat,
+            snippet: inputValue || chat.snippet,
+            timestamp: new Date(),
+            messages: [...chat.messages, userMessage]
+          };
+        }
+        return chat;
+      });
+    }
+    
+    // Update the chats
+    onUpdateChats(updatedChats);
+    
     setInputValue('');
     setSelectedFile(null);
     setIsLoading(true);
@@ -76,14 +138,26 @@ const ChatContainer = () => {
       
       setTimeout(() => {
         setIsLoading(false);
-        setMessages(prev => [
-          ...prev,
-          {
-            content: data.response || "I'm sorry, I couldn't process your request.",
-            isUser: false,
-            timestamp: new Date()
+        
+        // Create AI response message
+        const aiMessage = {
+          content: data.response || "I'm sorry, I couldn't process your request.",
+          isUser: false,
+          timestamp: new Date()
+        };
+        
+        // Update the chat with AI response
+        const finalUpdatedChats = updatedChats.map(chat => {
+          if (chat.id === updatedChatId) {
+            return {
+              ...chat,
+              messages: [...chat.messages, aiMessage]
+            };
           }
-        ]);
+          return chat;
+        });
+        
+        onUpdateChats(finalUpdatedChats);
       }, 1000); // Adding a delay to show the loading indicator
       
     } catch (error) {
@@ -120,12 +194,12 @@ const ChatContainer = () => {
     <div className="glass-panel rounded-2xl flex flex-col w-full max-w-3xl h-[80vh] mx-auto">
       <div className="border-b border-white/10 p-4 text-center">
         <h2 className="text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-accent to-primary">
-          AI Assistant
+          {chatId ? currentChat.name || "AI Assistant" : "New Chat"}
         </h2>
       </div>
       
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 ? (
+        {currentChat.messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center text-muted-foreground p-6">
             <div className="w-16 h-16 mb-4 rounded-full bg-accent/20 flex items-center justify-center">
               <div className="w-8 h-8 rounded-full bg-accent animate-pulse"></div>
@@ -136,7 +210,7 @@ const ChatContainer = () => {
             </p>
           </div>
         ) : (
-          messages.map((msg, index) => (
+          currentChat.messages.map((msg, index) => (
             <Message
               key={index}
               content={msg.content}
